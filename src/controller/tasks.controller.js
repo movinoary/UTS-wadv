@@ -1,4 +1,3 @@
-// File: src/controllers/tasks.controller.js (versi MySQL)
 const taskRepo = require("../repositories/task.repository");
 
 const listTasks = async (req, res, next) => {
