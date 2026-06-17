@@ -18,6 +18,13 @@ const options = {
       },
     ],
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
       schemas: {
         CreateTask: {
           type: "object",
@@ -91,10 +98,14 @@ const options = {
         },
       },
     },
-    tags: [{ name: "Tasks", description: "Operasi CRUD untuk resource Task" }],
+    tags: [
+      { name: "Tasks", description: "Operasi CRUD untuk resource Task" },
+      { name: "Auth", description: "Endpoint autentikasi" },
+      { name: "Users", description: "Operasi CRUD untuk resource User" },
+    ],
   },
   // swagger-jsdoc akan membaca JSDoc comment dari file-file ini
-  apis: ["./src/routes/*.js"],
+  apis: ["./src/router/*.js"],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

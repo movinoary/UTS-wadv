@@ -12,42 +12,125 @@ const {
 /**
  * @swagger
  * tags:
- * name: Auth
- * description: Endpoint autentikasi
+ *   - name: Auth
+ *     description: Endpoint autentikasi
  */
 /**
-* @swagger
-* /auth/register:
-* post:
-* summary: Registrasi user baru
-* tags: [Auth]
-* requestBody:
-* required: true
-* content:
-* application/json:
-* schema:
-* type: object
-* required: [name, email, password]
-* properties:
-* name: { type: string, example: 'Budi Santoso' }
-* email: { type: string, example: 'budi@example.com' }
-* password: { type: string, minLength: 8, example:
-'P@ssw0rd!' }
-* responses:
-* 201: { description: Registrasi berhasil }
-* 409: { description: Email sudah terdaftar }
-*/
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Registrasi user baru
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Budi Santoso
+ *               email:
+ *                 type: string
+ *                 example: budi@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 example: P@ssw0rd!
+ *     responses:
+ *       201:
+ *         description: Registrasi berhasil
+ *       409:
+ *         description: Email sudah terdaftar
+ */
 router.post("/register", validate(registerSchema), ctrl.register);
 /**
  * @swagger
  * /auth/login:
- * post:
- * summary: Login dan dapatkan token
- * tags: [Auth]
+ *   post:
+ *     summary: Login dan dapatkan token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: budi@example.com
+ *               password:
+ *                 type: string
+ *                 example: P@ssw0rd!
+ *     responses:
+ *       200:
+ *         description: Login berhasil
+ *       400:
+ *         description: Email atau password salah
  */
 router.post("/login", validate(loginSchema), ctrl.login);
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Perbarui access token menggunakan refresh token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token berhasil diperbarui
+ *       400:
+ *         description: Request tidak valid
+ */
 router.post("/refresh", validate(refreshSchema), ctrl.refresh);
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout dan batalkan refresh token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Logout berhasil
+ */
 router.post("/logout", ctrl.logout);
 // Route yang dilindungi — butuh access token
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Ambil detail user dari token access
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Informasi user berhasil diambil
+ *       401:
+ *         description: Token tidak valid atau tidak disertakan
+ */
 router.get("/me", authenticate, ctrl.me);
 module.exports = router;
