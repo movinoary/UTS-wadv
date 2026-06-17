@@ -1,8 +1,10 @@
+require("dotenv").config();
+
 module.exports = {
-  port: process.env.PORT,
-  nodeEnv: process.env.NODE_ENV,
-  appName: process.env.APP_NAME,
-  appVersion: process.env.APP_VERSION,
-  version: process.env.APP_VERSION,
-  env: process.env.NODE_ENV,
+  port: process.env.PORT || 3000,
+  nodeEnv: process.env.NODE_ENV || "development",
+  appName: process.env.APP_NAME || "wad-capstone",
+  appVersion: process.env.APP_VERSION || "1.0.0",
+  version: process.env.APP_VERSION || "1.0.0",
+  env: process.env.NODE_ENV || "development",
 };
