@@ -129,6 +129,83 @@ const getTasksByUser = async (req, res, next) => {
     next(err);
   }
 };
+
+const INDONESIAN_DAYS = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+];
+const INDONESIAN_MONTHS = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+const formatDateDetail = (date) => {
+  const day = INDONESIAN_DAYS[date.getDay()];
+  const month = INDONESIAN_MONTHS[date.getMonth()];
+  const paddedHour = String(date.getHours()).padStart(2, "0");
+  const paddedMinute = String(date.getMinutes()).padStart(2, "0");
+  const paddedSecond = String(date.getSeconds()).padStart(2, "0");
+
+  return `${day}, ${date.getDate()} ${month} ${date.getFullYear()} ${paddedHour}:${paddedMinute}:${paddedSecond}`;
+};
+
+const formatDuration = (milliseconds) => {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${hours} jam ${minutes} menit ${seconds} detik`;
+};
+
+const worklogs = async (req, res, next) => {
+  try {
+    const task = await taskRepo.findById(req.params.id);
+    if (!task)
+      return res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: `Task ID ${req.params.id} tidak ditemukan.`,
+        },
+      });
+
+    const createdAt = new Date(task.createdAt);
+    const updatedAt = new Date(task.updatedAt);
+    const duration = formatDuration(updatedAt - createdAt);
+    const startTime = formatDateDetail(createdAt);
+    const endTime = formatDateDetail(updatedAt);
+
+    res.status(200).json({
+      data: {
+        taskId: task.id,
+        title: task.title,
+        userId: task.user.id,
+        startTime,
+        endTime,
+        description: task.description,
+        duration,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listTasks,
   createTask,
@@ -137,4 +214,5 @@ module.exports = {
   replaceTask,
   deleteTask,
   getTasksByUser,
+  worklogs,
 };
