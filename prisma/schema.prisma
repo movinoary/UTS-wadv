@@ -77,3 +77,24 @@ model RefreshToken {
   @@index([userId])
   @@map("refresh_tokens")
 }
+
+// ─── Tambahkan enum baru ─────────────────────────────────
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── Update model User ───────────────────────────────────
+model User {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(100)
+  email String @unique @db.VarChar(255)
+  password String @db.VarChar(255)
+  role Role @default(USER) // ← Tambahkan baris ini
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks Task[]
+  refreshTokens RefreshToken[]
+  
+  @@map('users')
+}

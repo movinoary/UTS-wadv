@@ -2,6 +2,11 @@
 const config = require("./config");
 const express = require("express");
 const routes = require("./router");
+const helmet = require("helmet");
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+
+// Data
 const setupSwagger = require("./data/swagger");
 
 const tasksRoutes = require("./router/tasks.router");
@@ -25,6 +30,42 @@ app.use((req, res, next) => {
     );
   });
   next();
+});
+app.use(helmet());
+
+// ─── CORS Configuration ─────────────────────────────────────
+const corsOptions = {
+  origin: config.allowedOrigins,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  maxAge: 86400,
+};
+app.use(cors(corsOptions));
+
+// Rate limiter untuk semua endpoint API
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 100, // Maks 100 request per IP per 15 menit
+  standardHeaders: true, // Kirim header RateLimit-* standar
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: "TOO_MANY_REQUESTS",
+      message: "Terlalu banyak request. Coba lagi dalam beberapa menit.",
+    },
+  },
+});
+// Rate limiter ketat untuk endpoint autentikasi
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5, // Hanya 5 percobaan login per 15 menit per IP
+  message: {
+    error: {
+      code: "TOO_MANY_ATTEMPTS",
+      message: "Terlalu banyak percobaan. Coba lagi dalam 15 menit.",
+    },
+  },
 });
 
 // ─── Routes ─────────────────────────────────────────────────
