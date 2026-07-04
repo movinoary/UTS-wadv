@@ -24,7 +24,11 @@ const refreshTokenRepo = {
   async findByToken(token) {
     return prisma.refreshToken.findUnique({
       where: { token },
-      include: { user: { select: { id: true, email: true, name: true } } },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true, role: true },
+        },
+      },
     });
   },
 
@@ -51,4 +55,5 @@ const refreshTokenRepo = {
     });
   },
 };
+
 module.exports = refreshTokenRepo;

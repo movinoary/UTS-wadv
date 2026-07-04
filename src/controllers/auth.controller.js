@@ -1,4 +1,4 @@
-const authService = require("../service/auth.service");
+const authService = require("../services/auth.service");
 
 // POST /auth/register
 const register = async (req, res, next) => {
@@ -31,8 +31,8 @@ const login = async (req, res, next) => {
 // POST /auth/refresh
 const refresh = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
-    const tokens = await authService.refresh(refreshToken);
+    const { refreshToken, accessToken } = req.body;
+    const tokens = await authService.refresh(refreshToken, accessToken);
 
     res.status(200).json({
       message: "Token berhasil diperbarui.",
@@ -40,6 +40,7 @@ const refresh = async (req, res, next) => {
       refreshToken: tokens.refreshToken,
     });
   } catch (err) {
+    console.log("refresh =", err);
     next(err);
   }
 };
@@ -60,4 +61,5 @@ const me = (req, res) => {
   // req.user diisi oleh authenticate middleware
   res.status(200).json({ data: req.user });
 };
+
 module.exports = { register, login, refresh, logout, me };

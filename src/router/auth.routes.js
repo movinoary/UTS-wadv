@@ -1,20 +1,18 @@
-// File: src/routes/auth.routes.js
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const ctrl = require("../controller/auth.controller");
-const validate = require("../middleware/validate");
-const authenticate = require("../middleware/authenticate");
-const {
-  registerSchema,
-  loginSchema,
-  refreshSchema,
-} = require("../validations/auth.validator");
+const ctrl = require('../controllers/auth.controller');
+const validate = require('../middleware/validate');
+const authenticate = require('../middleware/authenticate');
+const { registerSchema, loginSchema, refreshSchema } =
+  require('../validators/auth.validator');
+
 /**
  * @swagger
  * tags:
  *   - name: Auth
  *     description: Endpoint autentikasi
  */
+
 /**
  * @swagger
  * /auth/register:
@@ -45,7 +43,8 @@ const {
  *       409:
  *         description: Email sudah terdaftar
  */
-router.post("/register", validate(registerSchema), ctrl.register);
+router.post('/register', validate(registerSchema), ctrl.register);
+
 /**
  * @swagger
  * /auth/login:
@@ -69,15 +68,16 @@ router.post("/register", validate(registerSchema), ctrl.register);
  *     responses:
  *       200:
  *         description: Login berhasil
- *       400:
+ *       401:
  *         description: Email atau password salah
  */
-router.post("/login", validate(loginSchema), ctrl.login);
+router.post('/login', validate(loginSchema), ctrl.login);
+
 /**
  * @swagger
  * /auth/refresh:
  *   post:
- *     summary: Perbarui access token menggunakan refresh token
+ *     summary: Refresh access token
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -92,15 +92,16 @@ router.post("/login", validate(loginSchema), ctrl.login);
  *     responses:
  *       200:
  *         description: Token berhasil diperbarui
- *       400:
- *         description: Request tidak valid
+ *       401:
+ *         description: Refresh token tidak valid
  */
-router.post("/refresh", validate(refreshSchema), ctrl.refresh);
+router.post('/refresh', validate(refreshSchema), ctrl.refresh);
+
 /**
  * @swagger
  * /auth/logout:
  *   post:
- *     summary: Logout dan batalkan refresh token
+ *     summary: Logout dan revoke refresh token
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -116,21 +117,23 @@ router.post("/refresh", validate(refreshSchema), ctrl.refresh);
  *       200:
  *         description: Logout berhasil
  */
-router.post("/logout", ctrl.logout);
-// Route yang dilindungi — butuh access token
+router.post('/logout', ctrl.logout);
+
 /**
  * @swagger
  * /auth/me:
  *   get:
- *     summary: Ambil detail user dari token access
+ *     summary: Dapatkan informasi user yang sedang login
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Informasi user berhasil diambil
+ *         description: Informasi user
  *       401:
- *         description: Token tidak valid atau tidak disertakan
+ *         description: Token tidak valid atau tidak ada
  */
-router.get("/me", authenticate, ctrl.me);
+// Route yang dilindungi — butuh access token
+router.get('/me', authenticate, ctrl.me);
+
 module.exports = router;

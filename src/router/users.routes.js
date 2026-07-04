@@ -1,26 +1,25 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { getTasksByUser } = require("../controller/tasks.controller");
+const { getTasksByUser } = require('../controller/task.controller');
 
 /**
  * @swagger
  * /users/{userId}/tasks:
  *   get:
- *     summary: Ambil task milik user tertentu
+ *     summary: Ambil semua task milik user tertentu
  *     tags: [Users]
  *     parameters:
  *       - in: path
  *         name: userId
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID user
  *     responses:
  *       200:
- *         description: Task user berhasil diambil
+ *         description: Berhasil
  *       404:
  *         description: User tidak ditemukan
  */
-router.get("/:userId/tasks", getTasksByUser);
+router.get('/:userId/tasks', getTasksByUser);
 
 module.exports = router;

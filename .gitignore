@@ -14,3 +14,5 @@ Thumbs.db
 dist/
 build/
 /src/generated/prisma
+
+/test

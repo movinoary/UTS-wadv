@@ -5,9 +5,9 @@ const config = require("../config");
 const userRepo = require("../repositories/user.repository");
 const refreshTokenRepo = require("../repositories/refreshToken.repository");
 const prisma = require("../config/prisma");
+
 // ─── Konfigurasi argon2id ────────────────────────────────
 // Sesuai rekomendasi OWASP (minimum argon2id)
-
 const ARGON2_OPTIONS = {
   memoryCost: 65536, // 64 MB — semakin tinggi semakin kuat
   timeCost: 3, // Jumlah iterasi
@@ -47,13 +47,16 @@ const authService = {
       err.code = "DUPLICATE_EMAIL";
       throw err;
     }
+
     // 2. Hash password dengan argon2id
     const hashedPassword = await argon2.hash(password, ARGON2_OPTIONS);
+
     // 3. Simpan user baru ke database
     const user = await prisma.user.create({
       data: { name, email, password: hashedPassword },
       select: { id: true, name: true, email: true, createdAt: true },
     });
+
     return user;
   },
 
@@ -61,13 +64,15 @@ const authService = {
   async login({ email, password }) {
     // 1. Cari user by email (termasuk password untuk verifikasi)
     const user = await userRepo.findByEmail(email);
-    // 2. Jika user tidak ada — gunakan pesan generik untuk mencegah user enumeration;
+
+    // 2. Jika user tidak ada — gunakan pesan generik untuk mencegah user enumeration
     if (!user) {
       const err = new Error("Email atau password salah.");
       err.statusCode = 401;
       err.code = "INVALID_CREDENTIALS";
       throw err;
     }
+
     // 3. Verifikasi password dengan argon2
     const isValid = await argon2.verify(user.password, password);
     if (!isValid) {
@@ -76,21 +81,32 @@ const authService = {
       err.code = "INVALID_CREDENTIALS";
       throw err;
     }
+
+    // 4. Buat access token (short-lived: 15 menit)
     // 4. Buat access token (short-lived: 15 menit)
     const accessToken = signAccessToken({
       userId: user.id,
       email: user.email,
+      role: user.role, // ← Tambahkan baris ini
     });
+
     // 5. Buat refresh token (long-lived: 7 hari)
     const refreshToken = signRefreshToken({ userId: user.id });
+
     // 6. Simpan refresh token ke database
     await refreshTokenRepo.create({
       token: refreshToken,
       userId: user.id,
       expiresAt: getRefreshTokenExpiry(),
     });
+
     return {
-      user: { id: user.id, name: user.name, email: user.email },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
       accessToken,
       refreshToken,
     };
@@ -108,8 +124,10 @@ const authService = {
       err.code = "INVALID_REFRESH_TOKEN";
       throw err;
     }
+
     // 2. Cek apakah token ada dan valid di database
     const storedToken = await refreshTokenRepo.findByToken(tokenString);
+
     // 3. REUSE DETECTION: token ada di DB tapi sudah di-revoke!
     // Ini tanda ada penyerang yang menggunakan token lama.
     if (storedToken && storedToken.isRevoked) {
@@ -122,6 +140,7 @@ const authService = {
       err.code = "TOKEN_REUSE_DETECTED";
       throw err;
     }
+
     // 4. Token tidak ditemukan di DB (mungkin sudah di-delete atau tidak valid)
     if (!storedToken) {
       const err = new Error("Refresh token tidak ditemukan.");
@@ -129,15 +148,28 @@ const authService = {
       err.code = "INVALID_REFRESH_TOKEN";
       throw err;
     }
+
     // 5. ROTATION: Revoke token lama
     await refreshTokenRepo.revoke(tokenString);
+
     // 6. Buat token baru
-    console.log("storedToken.user:", storedToken);
+    const user =
+      storedToken.user || (await userRepo.findById(storedToken.userId));
+
+    if (!user) {
+      const err = new Error("User pemilik refresh token tidak ditemukan.");
+      err.statusCode = 401;
+      err.code = "INVALID_REFRESH_TOKEN";
+      throw err;
+    }
+
     const newAccessToken = signAccessToken({
       userId: storedToken.userId,
-      email: storedToken.user.email,
+      email: user.email,
+      role: user.role,
     });
     const newRefreshToken = signRefreshToken({ userId: storedToken.userId });
+
     // 7. Simpan refresh token baru
     await refreshTokenRepo.create({
       token: newRefreshToken,
@@ -153,4 +185,5 @@ const authService = {
     await refreshTokenRepo.revoke(tokenString);
   },
 };
+
 module.exports = authService;

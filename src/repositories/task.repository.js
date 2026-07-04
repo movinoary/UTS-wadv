@@ -1,21 +1,12 @@
-const prisma = require("../config/prisma");
+const prisma = require('../config/prisma');
 
 const taskRepository = {
-  // ─── List tasks dengan filter, sort, pagination ────────
-  async findMany({
-    userId,
-    status,
-    priority,
-    sort = "createdAt",
-    order = "desc",
-    limit = 10,
-    offset = 0,
-  } = {}) {
+  async findMany({ userId, status, priority, sort = 'createdAt', order = 'desc', limit = 10, offset = 0 } = {}) {
     const where = {};
     if (userId) where.userId = Number(userId);
-    // MySQL enum di Prisma: nilai uppercase (TODO, IN_PROGRESS, DONE)
-    if (status) where.status = status.toUpperCase().replace("-", "_");
+    if (status) where.status = status.toUpperCase();
     if (priority) where.priority = priority.toUpperCase();
+
     const [data, total] = await Promise.all([
       prisma.task.findMany({
         where,
@@ -29,10 +20,10 @@ const taskRepository = {
       }),
       prisma.task.count({ where }),
     ]);
+
     return { data, total };
   },
 
-  // ─── Cari satu task by ID ───────────────────────────────
   async findById(id) {
     return prisma.task.findUnique({
       where: { id: Number(id) },
@@ -42,16 +33,14 @@ const taskRepository = {
       },
     });
   },
-  // ─── Buat task baru ─────────────────────────────────────
+
   async create(data) {
     return prisma.task.create({
       data: {
         title: data.title,
-        description: data.description || null,
-        status: data.status
-          ? data.status.toUpperCase().replace("-", "_")
-          : "TODO",
-        priority: data.priority ? data.priority.toUpperCase() : "MEDIUM",
+        description: data.description,
+        status: data.status ? data.status.toUpperCase() : 'TODO',
+        priority: data.priority ? data.priority.toUpperCase() : 'MEDIUM',
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         userId: Number(data.userId),
         categoryId: data.categoryId ? Number(data.categoryId) : null,
@@ -62,16 +51,14 @@ const taskRepository = {
       },
     });
   },
-  // ─── Update sebagian field (PATCH) ──────────────────────
+
   async update(id, data) {
     try {
       return await prisma.task.update({
         where: { id: Number(id) },
         data: {
           ...data,
-          status: data.status
-            ? data.status.toUpperCase().replace("-", "_")
-            : undefined,
+          status: data.status ? data.status.toUpperCase() : undefined,
           priority: data.priority ? data.priority.toUpperCase() : undefined,
           dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
         },
@@ -81,30 +68,28 @@ const taskRepository = {
         },
       });
     } catch (e) {
-      if (e.code === "P2025") return null; // Record tidak ditemukan
+      if (e.code === 'P2025') return null;
       throw e;
     }
   },
-  // ─── Hapus task ──────────────────────────────────────────
+
   async remove(id) {
     try {
       await prisma.task.delete({ where: { id: Number(id) } });
       return true;
     } catch (e) {
-      if (e.code === "P2025") return false;
+      if (e.code === 'P2025') return false;
       throw e;
     }
   },
-  // ─── JOIN: semua task milik user tertentu ────────────────
+
   async findByUser(userId) {
     return prisma.user.findUnique({
       where: { id: Number(userId) },
       include: {
         tasks: {
-          include: {
-            category: { select: { id: true, name: true, color: true } },
-          },
-          orderBy: { createdAt: "desc" },
+          include: { category: { select: { id: true, name: true, color: true } } },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });
