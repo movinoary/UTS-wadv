@@ -1,184 +1,268 @@
 # WAD Capstone API
 
-## Deskripsi
+Backend proyek capstone Web Advanced Development yang dibangun dengan Node.js, Express, Prisma, dan Socket.IO. Aplikasi ini menyediakan autentikasi pengguna, manajemen task, notifikasi real-time, serta dokumentasi API via Swagger.
 
-API ini adalah backend proyek capstone Web Advanced Development berbasis Node.js, Express, dan Prisma. Aplikasi menyediakan autentikasi, CRUD task, dan pelacakan durasi task.
+## Fitur Utama
 
-## Setup & Install
+- Autentikasi dengan JWT dan refresh token
+- CRUD task lengkap (create, read, update, delete)
+- Filter, sorting, dan pagination task
+- Worklogs / durasi task
+- Real-time event via Socket.IO
+- Dokumentasi API Swagger
 
-1. Clone repository:
+## Tech Stack
+
+- Node.js
+- Express.js
+- Prisma ORM
+- PostgreSQL
+- Socket.IO
+- Joi untuk validasi input
+- Swagger UI / Swagger JSDoc
+
+## Setup Lokal
+
+### 1. Prasyarat
+
+Pastikan perangkat telah terpasang:
+
+- Node.js 18+
+- PostgreSQL
+- npm atau pnpm
+
+### 2. Clone repository
 
 ```bash
 git clone <repo-url>
 cd wad-capstone
 ```
 
-2. Install dependency:
+### 3. Install dependency
 
 ```bash
 npm install
 ```
 
-3. Salin file environment:
+### 4. Siapkan environment
 
-```bash
-cp .env.example .env
-```
-
-4. Sesuaikan nilai di `.env`:
+Buat file `.env` berdasarkan kebutuhan aplikasi:
 
 ```env
 PORT=3005
 NODE_ENV=development
-APP_NAME=WAD Caption API
+APP_NAME=WAD Capstone API
 APP_VERSION=1.0.0
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=wadcapstone"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
 JWT_ACCESS_SECRET=your-access-secret
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=your-refresh-secret
 JWT_REFRESH_EXPIRES_IN=7d
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3001
 ```
 
-5. Siapkan database PostgreSQL dan sinkronkan schema Prisma:
+### 5. Siapkan database
 
 ```bash
+npx prisma migrate dev
+# atau jika hanya ingin sinkronisasi schema lokal
 npx prisma db push
 ```
 
-6. (Opsional) Seed data:
+### 6. Seed data (opsional)
 
 ```bash
 npm run db:seed
 ```
 
-7. Jalankan server:
+### 7. Jalankan server
 
 ```bash
 npm run dev
 ```
 
-atau untuk production:
+Server akan berjalan di:
 
-```bash
-npm start
+```text
+http://localhost:3005
 ```
 
-8. Buka dokumentasi Swagger:
+### 8. Akses dokumentasi API
 
 ```text
 http://localhost:3005/api/docs
 ```
 
-## Struktur API
+## Endpoint API
 
-### Info & Health
+Semua endpoint API berada di prefix `/api/v1` kecuali health check.
+
+### Health
 
 - `GET /health`
-- `GET /api/info`
 
 ### Auth
 
-Semua route auth dipasang di prefix `/api/v1/auth`.
-
-- `POST /api/v1/auth/register` - registrasi user baru
-- `POST /api/v1/auth/login` - login dan dapatkan access token + refresh token
-- `POST /api/v1/auth/refresh` - update access token dengan refresh token
-- `POST /api/v1/auth/logout` - logout dan batalkan refresh token
-- `GET /api/v1/auth/me` - ambil data user aktif (butuh `Authorization: Bearer <token>`)
+- `POST /api/v1/auth/register` — registrasi user baru
+- `POST /api/v1/auth/login` — login dan mendapatkan access token + refresh token
+- `POST /api/v1/auth/refresh` — refresh access token
+- `POST /api/v1/auth/logout` — revoke refresh token
+- `GET /api/v1/auth/me` — informasi user yang sedang login (butuh token)
 
 ### Tasks
 
-Semua route task dipasang di prefix `/api/v1/tasks`.
-
-- `GET /api/v1/tasks` - list task dengan filter, sort, pagination
-- `POST /api/v1/tasks` - buat task baru
-- `GET /api/v1/tasks/{id}` - ambil task berdasarkan ID
-- `GET /api/v1/tasks/{id}/worklogs` - ambil durasi dan detail waktu task
-- `PUT /api/v1/tasks/{id}` - update seluruh task berdasarkan ID
-- `PATCH /api/v1/tasks/{id}` - update sebagian task berdasarkan ID
-- `DELETE /api/v1/tasks/{id}` - hapus task berdasarkan ID
+- `GET /api/v1/tasks` — daftar task dengan filter, sorting, pagination
+- `POST /api/v1/tasks` — buat task baru
+- `GET /api/v1/tasks/:id` — detail task berdasarkan ID
+- `GET /api/v1/tasks/:id/worklogs` — melihat durasi dan timeline task
+- `PUT /api/v1/tasks/:id` — replace task secara penuh
+- `PATCH /api/v1/tasks/:id` — update sebagian task
+- `DELETE /api/v1/tasks/:id` — hapus task
 
 ### Users
 
-Semua route user dipasang di prefix `/api/v1/users`.
+- `GET /api/v1/users/:userId/tasks` — melihat task milik user tertentu
 
-- `GET /api/v1/users/{userId}/tasks` - ambil task milik user tertentu
+### Admin
 
-## Environment Variables
+- `GET /api/v1/admin/users` — melihat seluruh user
+- `PATCH /api/v1/admin/users/:id/role` — mengubah role user
+- `GET /api/v1/admin/tasks` — melihat seluruh task dari semua user
 
-Gunakan minimal variabel berikut di `.env`:
+## Event Socket.IO
 
-- `PORT`
-- `NODE_ENV`
-- `APP_NAME`
-- `APP_VERSION`
-- `DATABASE_URL`
-- `JWT_ACCESS_SECRET`
-- `JWT_ACCESS_EXPIRES_IN`
-- `JWT_REFRESH_SECRET`
-- `JWT_REFRESH_EXPIRES_IN`
+Backend menyediakan koneksi Socket.IO yang memerlukan token JWT pada handshake.
+
+### Autentikasi socket
+
+Client harus mengirim token melalui:
+
+```js
+socket.auth = {
+  token: "<jwt-access-token>",
+};
+```
+
+### Event yang diterima dari client
+
+- `ping` — health check sederhana, server akan mengembalikan `pong`
+
+### Event yang dikirim dari server
+
+- `users:online` — mengirim jumlah user yang sedang online
+- `task:created` — saat task berhasil dibuat
+- `task:updated` — saat task berhasil di-update
+- `task:deleted` — saat task berhasil dihapus
+- `notification` — notifikasi personal ke user tertentu
+
+### Room yang digunakan
+
+- `user:<userId>` — room personal untuk notifikasi user
+- `tasks:global` — room global untuk broadcast perubahan task
 
 ## ERD Database
 
-Tabel utama dan relasi:
+Struktur data utama aplikasi:
 
-- `users`
-  - `id` (PK)
-  - `name`
-  - `email` (unique)
-  - `password`
-  - `createdAt`
-  - `updatedAt`
+```mermaid
+erDiagram
+    USER ||--o{ TASK : owns
+    USER ||--o{ REFRESH_TOKEN : has
+    CATEGORY ||--o{ TASK : categorizes
 
-- `categories`
-  - `id` (PK)
-  - `name` (unique)
-  - `color`
-  - `createdAt`
+    USER {
+      int id PK
+      string name
+      string email UK
+      string password
+      string role
+      datetime createdAt
+      datetime updatedAt
+    }
 
-- `tasks`
-  - `id` (PK)
-  - `title`
-  - `description`
-  - `status` (`TODO`, `IN_PROGRESS`, `DONE`)
-  - `priority` (`LOW`, `MEDIUM`, `HIGH`)
-  - `dueDate`
-  - `createdAt`
-  - `updatedAt`
-  - `userId` (FK ke `users.id`)
-  - `categoryId` (nullable FK ke `categories.id`)
+    CATEGORY {
+      int id PK
+      string name UK
+      string color
+      datetime createdAt
+    }
 
-- `refresh_tokens`
-  - `id` (PK)
-  - `token` (unique)
-  - `userId` (FK ke `users.id`)
-  - `expiresAt`
-  - `isRevoked`
-  - `createdAt`
+    TASK {
+      int id PK
+      string title
+      string description
+      string status
+      string priority
+      datetime dueDate
+      datetime createdAt
+      datetime updatedAt
+      int userId FK
+      int categoryId FK
+    }
 
-### Relasi utama
+    REFRESH_TOKEN {
+      int id PK
+      string token UK
+      int userId FK
+      datetime expiresAt
+      boolean isRevoked
+      datetime createdAt
+    }
+```
 
-- `User` 1 --- \* `Task`
-- `User` 1 --- \* `RefreshToken`
-- `Category` 1 --- \* `Task`
+### Ringkasan relasi
 
-## Prisma Schema
+- Satu user dapat memiliki banyak task
+- Satu user dapat memiliki banyak refresh token
+- Satu category dapat digunakan oleh banyak task
+- Task memiliki relasi opsional ke category
 
-Tabel Prisma menggunakan model:
+## Arsitektur Deployment
 
-- `User` → tabel `users`
-- `Category` → tabel `categories`
-- `Task` → tabel `tasks`
-- `RefreshToken` → tabel `refresh_tokens`
+Arsitektur deployment yang disarankan untuk proyek ini adalah sebagai berikut:
 
-## Swagger
+```text
+Client / Browser
+        |
+        v
+   Nginx (reverse proxy)
+        |
+        +--> Frontend (React/Vite / static app)
+        |
+        +--> Backend (Node.js + Express + Prisma)
+                 |
+                 v
+            Database (PostgreSQL)
+```
 
-Dokumentasi API tersedia pada:
+### Alur deployment
 
-- `http://localhost:3005/api/docs`
-- `http://localhost:3005/api/docs.json`
+1. Docker mengelola container frontend, backend, database, dan nginx
+2. Frontend menerima request dari browser
+3. Nginx men-dispatch request ke frontend atau backend sesuai path
+4. Backend berkomunikasi dengan PostgreSQL melalui Prisma
+5. Socket.IO berjalan pada backend dan dapat diakses melalui Nginx / reverse proxy
+
+> Pada repo ini, struktur Docker belum disertakan, tetapi arsitektur di atas adalah target deployment yang sesuai dengan aplikasi backend ini.
+
+## Struktur Folder
+
+```text
+src/
+  controller/
+  controllers/
+  middleware/
+  repositories/
+  router/
+  services/
+  validators/
+prisma/
+  schema.prisma
+  seed.js
+```
 
 ## Catatan
 
-- Pastikan PostgreSQL berjalan dan `DATABASE_URL` benar.
-- Jika route belum muncul di Swagger, restart server setelah perubahan file.
+- Pastikan PostgreSQL aktif sebelum menjalankan aplikasi
+- Jika ada perubahan pada schema Prisma, jalankan migrasi sebelum menjalankan server
+- Swagger akan otomatis ter-update saat server berjalan
