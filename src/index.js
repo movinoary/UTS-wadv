@@ -6,7 +6,6 @@ const { Server } = require("socket.io"); // ← TAMBAH: Class Socket.IO
 const helmet = require("helmet");
 const cors = require("cors");
 
-
 const { corsOptions } = require("./config/cors");
 const { apiLimiter } = require("./config/rateLimiter");
 
@@ -24,7 +23,9 @@ const server = http.createServer(app); // ← HTTP server membungkus Express
 const io = new Server(server, {
   cors: {
     // Ambil origin dari .env persis seperti konfigurasi REST API kita
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ["http://localhost:5173", "http://localhost:3001"],
+    origin: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(",")
+      : ["http://localhost:5173", "http://localhost:3001"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   },
@@ -40,7 +41,7 @@ app.set("io", io);
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "10kb" }));
-app.use(apiLimiter);
+// app.use(apiLimiter);
 
 // ── ROUTES ────────────────────────────────────────────────
 app.use("/api/v1/auth", authRoutes);
@@ -52,10 +53,10 @@ app.use("/api/v1/admin", adminRoutes);
 setupSwagger(app);
 
 // ── SOCKET.IO SETUP ───────────────────────────────────────
-// Trik aman: Dibungkus try-catch agar server tidak crash 
+// Trik aman: Dibungkus try-catch agar server tidak crash
 // saat menunggu kamu membuat file socket.js di Langkah 3
 try {
-  require("./socket")(io); 
+  require("./socket")(io);
 } catch (err) {
   console.log("⏳ Menunggu file src/socket.js dibuat pada Langkah 3...");
 }
@@ -64,11 +65,11 @@ try {
 app.use((req, res) => res.status(404).json({ error: { code: "NOT_FOUND" } }));
 app.use((err, req, res, next) => {
   const status = err.status || 500;
-  res.status(status).json({ 
-    error: { 
-      code: err.code || "INTERNAL_ERROR", 
-      message: err.message 
-    } 
+  res.status(status).json({
+    error: {
+      code: err.code || "INTERNAL_ERROR",
+      message: err.message,
+    },
   });
 });
 

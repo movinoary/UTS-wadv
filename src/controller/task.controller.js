@@ -1,13 +1,13 @@
 // src/controller/task.controller.js
-const taskRepo = require('../repositories/task.repository');
+const taskRepo = require("../repositories/task.repository");
 
 // ─── GET /api/v1/tasks ──────────────────────────────────────
 const listTasks = async (req, res, next) => {
   try {
     const { status, priority, sort, order, limit, offset } = req.query;
-    
+
     // User biasa hanya lihat task miliknya; Admin lihat semua
-    const userId = req.user.role === 'ADMIN' ? undefined : req.user.userId;
+    const userId = req.user.role === "ADMIN" ? undefined : req.user.userId;
 
     const { data, total } = await taskRepo.findMany({
       userId,
@@ -45,9 +45,12 @@ const createTask = async (req, res, next) => {
   const { title, description, status, priority, dueDate } = req.body;
   const userId = req.user.userId;
 
-  const formattedDueDate = (dueDate && typeof dueDate === 'string' && dueDate.trim() !== "") 
-                            ? new Date(dueDate) 
-                            : null;
+  console.log("Received dueDate:", dueDate); // Debugging line
+
+  const formattedDueDate =
+    dueDate === undefined || dueDate === null || dueDate === ""
+      ? null
+      : dueDate;
 
   try {
     const task = await taskRepo.create({
@@ -62,7 +65,7 @@ const createTask = async (req, res, next) => {
     // --- TAMBAHKAN INI ---
     // 1. Ambil instance IO yang sudah diset di app.js
     const io = req.app.get("io");
-    
+
     // 2. Kirim sinyal ke semua orang yang mendengarkan room "tasks:global"
     if (io) {
       io.to("tasks:global").emit("task:created", { task });
@@ -79,7 +82,7 @@ const createTask = async (req, res, next) => {
       data: task,
     });
   } catch (error) {
-    next(error); 
+    next(error);
   }
 };
 
@@ -90,7 +93,10 @@ const getTask = async (req, res, next) => {
 
     if (!task) {
       return res.status(404).json({
-        error: { code: 'NOT_FOUND', message: `Task ID ${req.params.id} tidak ditemukan.` },
+        error: {
+          code: "NOT_FOUND",
+          message: `Task ID ${req.params.id} tidak ditemukan.`,
+        },
       });
     }
 
@@ -107,7 +113,10 @@ const replaceTask = async (req, res, next) => {
 
     if (!task) {
       return res.status(404).json({
-        error: { code: 'NOT_FOUND', message: `Task ID ${req.params.id} tidak ditemukan.` },
+        error: {
+          code: "NOT_FOUND",
+          message: `Task ID ${req.params.id} tidak ditemukan.`,
+        },
       });
     }
 
@@ -130,7 +139,10 @@ const updateTask = async (req, res, next) => {
 
     if (!task) {
       return res.status(404).json({
-        error: { code: 'NOT_FOUND', message: `Task ID ${req.params.id} tidak ditemukan.` },
+        error: {
+          code: "NOT_FOUND",
+          message: `Task ID ${req.params.id} tidak ditemukan.`,
+        },
       });
     }
 
@@ -153,14 +165,19 @@ const deleteTask = async (req, res, next) => {
 
     if (!ok) {
       return res.status(404).json({
-        error: { code: 'NOT_FOUND', message: `Task ID ${req.params.id} tidak ditemukan.` },
+        error: {
+          code: "NOT_FOUND",
+          message: `Task ID ${req.params.id} tidak ditemukan.`,
+        },
       });
     }
 
     // EMIT REAL-TIME EVENT
     const io = req.app.get("io");
     if (io) {
-      io.to("tasks:global").emit("task:deleted", { taskId: parseInt(req.params.id) });
+      io.to("tasks:global").emit("task:deleted", {
+        taskId: parseInt(req.params.id),
+      });
     }
 
     res.status(204).send();
@@ -176,7 +193,10 @@ const getTasksByUser = async (req, res, next) => {
 
     if (!result) {
       return res.status(404).json({
-        error: { code: 'NOT_FOUND', message: `User ID ${req.params.userId} tidak ditemukan.` },
+        error: {
+          code: "NOT_FOUND",
+          message: `User ID ${req.params.userId} tidak ditemukan.`,
+        },
       });
     }
 
@@ -192,6 +212,82 @@ const getTasksByUser = async (req, res, next) => {
   }
 };
 
+const INDONESIAN_DAYS = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+];
+const INDONESIAN_MONTHS = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+const formatDateDetail = (date) => {
+  const day = INDONESIAN_DAYS[date.getDay()];
+  const month = INDONESIAN_MONTHS[date.getMonth()];
+  const paddedHour = String(date.getHours()).padStart(2, "0");
+  const paddedMinute = String(date.getMinutes()).padStart(2, "0");
+  const paddedSecond = String(date.getSeconds()).padStart(2, "0");
+
+  return `${day}, ${date.getDate()} ${month} ${date.getFullYear()} ${paddedHour}:${paddedMinute}:${paddedSecond}`;
+};
+
+const formatDuration = (milliseconds) => {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${hours} jam ${minutes} menit ${seconds} detik`;
+};
+
+const worklogs = async (req, res, next) => {
+  try {
+    const task = await taskRepo.findById(req.params.id);
+    if (!task)
+      return res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: `Task ID ${req.params.id} tidak ditemukan.`,
+        },
+      });
+
+    const createdAt = new Date(task.createdAt);
+    const updatedAt = new Date(task.updatedAt);
+    const duration = formatDuration(updatedAt - createdAt);
+    const startTime = formatDateDetail(createdAt);
+    const endTime = formatDateDetail(updatedAt);
+
+    res.status(200).json({
+      data: {
+        taskId: task.id,
+        title: task.title,
+        userId: task.user.id,
+        startTime,
+        endTime,
+        description: task.description,
+        duration,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listTasks,
   createTask,
@@ -200,4 +296,5 @@ module.exports = {
   updateTask,
   deleteTask,
   getTasksByUser,
+  worklogs,
 };

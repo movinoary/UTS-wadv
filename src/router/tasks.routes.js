@@ -1,19 +1,19 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const ctrl = require('../controller/task.controller');
-const validate = require('../middleware/validate');
+const ctrl = require("../controller/task.controller");
+const validate = require("../middleware/validate");
 
-const authenticate = require('../middleware/authenticate');
-const authorize = require('../middleware/authorize');
-const { checkTaskOwnership } = require('../middleware/checkOwnership');
-const { sanitizeBody } = require('../middleware/sanitize');
+const authenticate = require("../middleware/authenticate");
+const authorize = require("../middleware/authorize");
+const { checkTaskOwnership } = require("../middleware/checkOwnership");
+const { sanitizeBody } = require("../middleware/sanitize");
 
 const {
   createTaskSchema,
   replaceTaskSchema,
   updateTaskSchema,
   listTasksSchema,
-} = require('../validators/task.validator');
+} = require("../validators/task.validator");
 
 router.use(authenticate);
 
@@ -71,9 +71,22 @@ router.get('/', validate(listTasksSchema, 'query'), ctrl.listTasks);
 router.post('/', validate(createTaskSchema, 'body'), sanitizeBody, authorize('USER', 'ADMIN'), ctrl.createTask);
 
 // ROUTES DENGAN PENGECEKAN KEPEMILIKAN
-router.get('/:id', checkTaskOwnership, ctrl.getTask);
-router.put('/:id', checkTaskOwnership, validate(replaceTaskSchema, 'body'), sanitizeBody, ctrl.replaceTask);
-router.patch('/:id', checkTaskOwnership, validate(updateTaskSchema, 'body'), sanitizeBody, ctrl.updateTask);
-router.delete('/:id', checkTaskOwnership, ctrl.deleteTask);
+router.get("/:id", checkTaskOwnership, ctrl.getTask);
+router.get("/:id/worklogs", ctrl.worklogs);
+router.put(
+  "/:id",
+  checkTaskOwnership,
+  validate(replaceTaskSchema, "body"),
+  sanitizeBody,
+  ctrl.replaceTask,
+);
+router.patch(
+  "/:id",
+  checkTaskOwnership,
+  validate(updateTaskSchema, "body"),
+  sanitizeBody,
+  ctrl.updateTask,
+);
+router.delete("/:id", checkTaskOwnership, ctrl.deleteTask);
 
 module.exports = router;

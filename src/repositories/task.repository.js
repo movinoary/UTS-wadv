@@ -1,7 +1,16 @@
-const prisma = require('../config/prisma');
+const prisma = require("../config/prisma");
+const { normalizeDueDate } = require("./task.utils");
 
 const taskRepository = {
-  async findMany({ userId, status, priority, sort = 'createdAt', order = 'desc', limit = 10, offset = 0 } = {}) {
+  async findMany({
+    userId,
+    status,
+    priority,
+    sort = "createdAt",
+    order = "desc",
+    limit = 10,
+    offset = 0,
+  } = {}) {
     const where = {};
     if (userId) where.userId = Number(userId);
     if (status) where.status = status.toUpperCase();
@@ -39,9 +48,9 @@ const taskRepository = {
       data: {
         title: data.title,
         description: data.description,
-        status: data.status ? data.status.toUpperCase() : 'TODO',
-        priority: data.priority ? data.priority.toUpperCase() : 'MEDIUM',
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        status: data.status ? data.status.toUpperCase() : "TODO",
+        priority: data.priority ? data.priority.toUpperCase() : "MEDIUM",
+        dueDate: normalizeDueDate(data.dueDate),
         userId: Number(data.userId),
         categoryId: data.categoryId ? Number(data.categoryId) : null,
       },
@@ -60,7 +69,10 @@ const taskRepository = {
           ...data,
           status: data.status ? data.status.toUpperCase() : undefined,
           priority: data.priority ? data.priority.toUpperCase() : undefined,
-          dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+          dueDate:
+            data.dueDate === undefined
+              ? undefined
+              : normalizeDueDate(data.dueDate),
         },
         include: {
           user: { select: { id: true, name: true, email: true } },
@@ -68,7 +80,7 @@ const taskRepository = {
         },
       });
     } catch (e) {
-      if (e.code === 'P2025') return null;
+      if (e.code === "P2025") return null;
       throw e;
     }
   },
@@ -78,7 +90,7 @@ const taskRepository = {
       await prisma.task.delete({ where: { id: Number(id) } });
       return true;
     } catch (e) {
-      if (e.code === 'P2025') return false;
+      if (e.code === "P2025") return false;
       throw e;
     }
   },
@@ -88,8 +100,10 @@ const taskRepository = {
       where: { id: Number(userId) },
       include: {
         tasks: {
-          include: { category: { select: { id: true, name: true, color: true } } },
-          orderBy: { createdAt: 'desc' },
+          include: {
+            category: { select: { id: true, name: true, color: true } },
+          },
+          orderBy: { createdAt: "desc" },
         },
       },
     });
